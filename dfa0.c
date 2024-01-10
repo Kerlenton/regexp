@@ -3,6 +3,8 @@
  * Supports only ( | ) * + ?. No escapes.
  * Compiles to NFA and then simulates NFA
  * using Thompson's algorithm.
+ * Caches steps of Thompson's algorithm to
+ * build DFA on the fly, as in Aho's egrep.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -338,21 +340,115 @@ step(List *clist, int c, List *nlist)
 	}
 }
 
-/* Run NFA to determine whether it matches s. */
-int
-match(State *start, char *s)
+/*
+ * Represents a DFA state: a cached NFA state list.
+*/
+typedef struct DState DState;
+struct DState
 {
-	int i, c;
-	List *clist, *nlist, *t;
+    List l;
+    DState *next[256];
+    DState *left;
+    DState *right;
+};
 
-	clist = startlist(start, &l1);
-	nlist = &l2;
-	for(; *s; s++){
-		c = *s & 0xFF;
-		step(clist, c, nlist);
-		t = clist; clist = nlist; nlist = t;	/* swap clist, nlist */
+/* Compare lists: first by length, then by members. */
+static int
+listcmp(List *l1, List *l2)
+{
+	int i;
+
+	if(l1->n < l2->n)
+		return -1;
+	if(l1->n > l2->n)
+		return 1;
+	for(i=0; i<l1->n; i++)
+		if(l1->s[i] < l2->s[i])
+			return -1;
+		else if(l1->s[i] > l2->s[i])
+			return 1;
+	return 0;
+}
+
+/* Compare pointers by address. */
+static int
+ptrcmp(const void *a, const void *b)
+{
+	if(a < b)
+		return -1;
+	if(a > b)
+		return 1;
+	return 0;
+}
+
+/*
+ * Return the cached DState for list l,
+ * creating a new one if needed.
+ */
+DState *alldstates;
+DState*
+dstate(List *l)
+{
+	int i;
+	DState **dp, *d;
+
+	qsort(l->s, l->n, sizeof l->s[0], ptrcmp);
+	dp = &alldstates;
+	while((d = *dp) != NULL){
+		i = listcmp(l, &d->l);
+		if(i < 0)
+			dp = &d->left;
+		else if(i > 0)
+			dp = &d->right;
+		else
+			return d;
 	}
-	return ismatch(clist);
+
+	d = malloc(sizeof *d + l->n*sizeof l->s[0]);
+	memset(d, 0, sizeof *d);
+	d->l.s = (State**)(d+1);
+	memmove(d->l.s, l->s, l->n*sizeof l->s[0]);
+	d->l.n = l->n;
+	*dp = d;
+	return d;
+}
+
+void
+startnfa(State *start, List *l)
+{
+	l->n = 0;
+	listid++;
+	addstate(l, start);
+}
+
+DState*
+startdstate(State *start)
+{
+	return dstate(startlist(start, &l1));
+}
+
+DState*
+nextstate(DState *d, int c)
+{
+	step(&d->l, c, &l1);
+	return d->next[c] = dstate(&l1);
+}
+
+/* Run DFA to determine whether it matches s. */
+int
+match(DState *start, char *s)
+{
+	DState *d, *next;
+	int c, i;
+
+	d = start;
+	for (; *s; s++){
+		c = *s & 0xFF;
+		if((next = d->next[c]) == NULL)
+			next = nextstate(d, c);
+		d = next;
+	}
+	return ismatch(&d->l);
 }
 
 int
@@ -382,7 +478,7 @@ main(int argc, char **argv)
 	l1.s = malloc(nstate*sizeof l1.s[0]);
 	l2.s = malloc(nstate*sizeof l2.s[0]);
 	for(i = 2; i < argc; i++)
-		if(match(start, argv[i]))
+		if(match(startdstate(start), argv[i]))
 			printf("%s\n", argv[i]);
 	return 0;
 }
