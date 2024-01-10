@@ -216,14 +216,14 @@ post2nfa(char *postfix)
     // fprintf(stderr, "postfix: %s\n", postfix);
 
     if(postfix == NULL)
-	    return NULL;
+        return NULL;
 
-	#define push(s) *stackp++ = s
-	#define pop() *--stackp
+    #define push(s) *stackp++ = s
+    #define pop() *--stackp
 
     stackp = stack;
-    for(p=postfix; *p; p++){
-        switch(*p){
+    for (p = postfix; *p; p++) {
+        switch (*p) {
             default:
                 s = state(*p, NULL, NULL);
                 push(frag(s, list1(&s->out)));
@@ -260,12 +260,12 @@ post2nfa(char *postfix)
         }
     }
 
-	e = pop();
-	if(stackp != stack)
-		return NULL;
+    e = pop();
+    if (stackp != stack)
+        return NULL;
 
-	patch(e.out, &matchstate);
-	return e.start;
+    patch(e.out, &matchstate);
+    return e.start;
 #undef pop
 #undef push
 }
@@ -273,8 +273,8 @@ post2nfa(char *postfix)
 typedef struct List List;
 struct List
 {
-	State **s;
-	int n;
+    State **s;
+    int n;
 };
 List l1, l2;
 static int listid;
@@ -286,38 +286,38 @@ void step(List*, int, List*);
 List*
 startlist(State *start, List *l)
 {
-	l->n = 0;
-	listid++;
-	addstate(l, start);
-	return l;
+    l->n = 0;
+    listid++;
+    addstate(l, start);
+    return l;
 }
 
 /* Check whether state list contains a match. */
 int
 ismatch(List *l)
 {
-	int i;
+    int i;
 
-	for(i = 0; i < l->n; i++)
-		if(l->s[i] == &matchstate)
-			return 1;
-	return 0;
+    for (i = 0; i < l->n; i++)
+        if (l->s[i] == &matchstate)
+            return 1;
+    return 0;
 }
 
 /* Add s to l, following unlabeled arrows. */
 void
 addstate(List *l, State *s)
 {
-	if(s == NULL || s->lastlist == listid)
-	    return;
-	s->lastlist = listid;
-	if(s->c == Split){
-		/* follow unlabeled arrows */
-		addstate(l, s->out);
-		addstate(l, s->out1);
-		return;
-	}
-	l->s[l->n++] = s;
+    if (s == NULL || s->lastlist == listid)
+        return;
+    s->lastlist = listid;
+    if (s->c == Split) {
+        /* follow unlabeled arrows */
+        addstate(l, s->out);
+        addstate(l, s->out1);
+        return;
+    }
+    l->s[l->n++] = s;
 }
 
 /*
@@ -328,16 +328,16 @@ addstate(List *l, State *s)
 void
 step(List *clist, int c, List *nlist)
 {
-	int i;
-	State *s;
+    int i;
+    State *s;
 
-	listid++;
-	nlist->n = 0;
-	for(i = 0; i < clist->n; i++){
-		s = clist->s[i];
-		if(s->c == c)
-			addstate(nlist, s->out);
-	}
+    listid++;
+    nlist->n = 0;
+    for (i = 0; i < clist->n; i++) {
+        s = clist->s[i];
+        if (s->c == c)
+            addstate(nlist, s->out);
+    }
 }
 
 /*
@@ -356,29 +356,29 @@ struct DState
 static int
 listcmp(List *l1, List *l2)
 {
-	int i;
+    int i;
 
-	if(l1->n < l2->n)
-		return -1;
-	if(l1->n > l2->n)
-		return 1;
-	for(i=0; i<l1->n; i++)
-		if(l1->s[i] < l2->s[i])
-			return -1;
-		else if(l1->s[i] > l2->s[i])
-			return 1;
-	return 0;
+    if (l1->n < l2->n)
+        return -1;
+    if (l1->n > l2->n)
+        return 1;
+    for (i = 0; i < l1->n; i++)
+        if (l1->s[i] < l2->s[i])
+            return -1;
+        else if (l1->s[i] > l2->s[i])
+            return 1;
+    return 0;
 }
 
 /* Compare pointers by address. */
 static int
 ptrcmp(const void *a, const void *b)
 {
-	if(a < b)
-		return -1;
-	if(a > b)
-		return 1;
-	return 0;
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
 }
 
 /*
@@ -389,96 +389,96 @@ DState *alldstates;
 DState*
 dstate(List *l)
 {
-	int i;
-	DState **dp, *d;
+    int i;
+    DState **dp, *d;
 
-	qsort(l->s, l->n, sizeof l->s[0], ptrcmp);
-	dp = &alldstates;
-	while((d = *dp) != NULL){
-		i = listcmp(l, &d->l);
-		if(i < 0)
-			dp = &d->left;
-		else if(i > 0)
-			dp = &d->right;
-		else
-			return d;
-	}
+    qsort(l->s, l->n, sizeof l->s[0], ptrcmp);
+    dp = &alldstates;
+    while ((d = *dp) != NULL) {
+        i = listcmp(l, &d->l);
+        if (i < 0)
+            dp = &d->left;
+        else if (i > 0)
+            dp = &d->right;
+        else
+            return d;
+    }
 
-	d = malloc(sizeof *d + l->n*sizeof l->s[0]);
-	memset(d, 0, sizeof *d);
-	d->l.s = (State**)(d+1);
-	memmove(d->l.s, l->s, l->n*sizeof l->s[0]);
-	d->l.n = l->n;
-	*dp = d;
-	return d;
+    d = malloc(sizeof *d + l->n*sizeof l->s[0]);
+    memset(d, 0, sizeof *d);
+    d->l.s = (State**)(d+1);
+    memmove(d->l.s, l->s, l->n*sizeof l->s[0]);
+    d->l.n = l->n;
+    *dp = d;
+    return d;
 }
 
 void
 startnfa(State *start, List *l)
 {
-	l->n = 0;
-	listid++;
-	addstate(l, start);
+    l->n = 0;
+    listid++;
+    addstate(l, start);
 }
 
 DState*
 startdstate(State *start)
 {
-	return dstate(startlist(start, &l1));
+    return dstate(startlist(start, &l1));
 }
 
 DState*
 nextstate(DState *d, int c)
 {
-	step(&d->l, c, &l1);
-	return d->next[c] = dstate(&l1);
+    step(&d->l, c, &l1);
+    return d->next[c] = dstate(&l1);
 }
 
 /* Run DFA to determine whether it matches s. */
 int
 match(DState *start, char *s)
 {
-	DState *d, *next;
-	int c, i;
+    DState *d, *next;
+    int c, i;
 
-	d = start;
-	for (; *s; s++){
-		c = *s & 0xFF;
-		if((next = d->next[c]) == NULL)
-			next = nextstate(d, c);
-		d = next;
-	}
-	return ismatch(&d->l);
+    d = start;
+    for (; *s; s++) {
+        c = *s & 0xFF;
+        if ((next = d->next[c]) == NULL)
+            next = nextstate(d, c);
+        d = next;
+    }
+    return ismatch(&d->l);
 }
 
 int
 main(int argc, char **argv)
 {
-	int i;
-	char *post;
-	State *start;
+    int i;
+    char *post;
+    State *start;
 
-	if(argc < 3){
-		fprintf(stderr, "usage: nfa regexp string...\n");
-		return 1;
-	}
+    if (argc < 3) {
+        fprintf(stderr, "usage: nfa regexp string...\n");
+        return 1;
+    }
 
-	post = re2post(argv[1]);
-	if(post == NULL){
-		fprintf(stderr, "bad regexp %s\n", argv[1]);
-		return 1;
-	}
+    post = re2post(argv[1]);
+    if (post == NULL) {
+        fprintf(stderr, "bad regexp %s\n", argv[1]);
+        return 1;
+    }
 
-	start = post2nfa(post);
-	if(start == NULL){
-		fprintf(stderr, "error in post2nfa %s\n", post);
-		return 1;
-	}
+    start = post2nfa(post);
+    if (start == NULL) {
+        fprintf(stderr, "error in post2nfa %s\n", post);
+        return 1;
+    }
 
-	l1.s = malloc(nstate*sizeof l1.s[0]);
-	l2.s = malloc(nstate*sizeof l2.s[0]);
-	for(i = 2; i < argc; i++)
-		if(match(startdstate(start), argv[i]))
-			printf("%s\n", argv[i]);
-	return 0;
+    l1.s = malloc(nstate*sizeof l1.s[0]);
+    l2.s = malloc(nstate*sizeof l2.s[0]);
+    for (i = 2; i < argc; i++)
+        if (match(startdstate(start), argv[i]))
+            printf("%s\n", argv[i]);
+    return 0;
 }

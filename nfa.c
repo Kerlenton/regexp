@@ -213,15 +213,15 @@ post2nfa(char *postfix)
 
     // fprintf(stderr, "postfix: %s\n", postfix);
 
-    if(postfix == NULL)
-	    return NULL;
+    if (postfix == NULL)
+        return NULL;
 
-	#define push(s) *stackp++ = s
-	#define pop() *--stackp
+    #define push(s) *stackp++ = s
+    #define pop() *--stackp
 
     stackp = stack;
-    for(p=postfix; *p; p++){
-        switch(*p){
+    for (p = postfix; *p; p++) {
+        switch (*p) {
             default:
                 s = state(*p, NULL, NULL);
                 push(frag(s, list1(&s->out)));
@@ -258,12 +258,12 @@ post2nfa(char *postfix)
         }
     }
 
-	e = pop();
-	if(stackp != stack)
-		return NULL;
+    e = pop();
+    if (stackp != stack)
+        return NULL;
 
-	patch(e.out, &matchstate);
-	return e.start;
+    patch(e.out, &matchstate);
+    return e.start;
 #undef pop
 #undef push
 }
@@ -271,8 +271,8 @@ post2nfa(char *postfix)
 typedef struct List List;
 struct List
 {
-	State **s;
-	int n;
+    State **s;
+    int n;
 };
 List l1, l2;
 static int listid;
@@ -284,38 +284,38 @@ void step(List*, int, List*);
 List*
 startlist(State *start, List *l)
 {
-	l->n = 0;
-	listid++;
-	addstate(l, start);
-	return l;
+    l->n = 0;
+    listid++;
+    addstate(l, start);
+    return l;
 }
 
 /* Check whether state list contains a match. */
 int
 ismatch(List *l)
 {
-	int i;
+    int i;
 
-	for(i = 0; i < l->n; i++)
-		if(l->s[i] == &matchstate)
-			return 1;
-	return 0;
+    for (i = 0; i < l->n; i++)
+        if (l->s[i] == &matchstate)
+            return 1;
+    return 0;
 }
 
 /* Add s to l, following unlabeled arrows. */
 void
 addstate(List *l, State *s)
 {
-	if(s == NULL || s->lastlist == listid)
-	    return;
-	s->lastlist = listid;
-	if(s->c == Split){
-		/* follow unlabeled arrows */
-		addstate(l, s->out);
-		addstate(l, s->out1);
-		return;
-	}
-	l->s[l->n++] = s;
+    if (s == NULL || s->lastlist == listid)
+        return;
+    s->lastlist = listid;
+    if (s->c == Split) {
+        /* follow unlabeled arrows */
+        addstate(l, s->out);
+        addstate(l, s->out1);
+        return;
+    }
+    l->s[l->n++] = s;
 }
 
 /*
@@ -326,63 +326,63 @@ addstate(List *l, State *s)
 void
 step(List *clist, int c, List *nlist)
 {
-	int i;
-	State *s;
+    int i;
+    State *s;
 
-	listid++;
-	nlist->n = 0;
-	for(i = 0; i < clist->n; i++){
-		s = clist->s[i];
-		if(s->c == c)
-			addstate(nlist, s->out);
-	}
+    listid++;
+    nlist->n = 0;
+    for (i = 0; i < clist->n; i++) {
+        s = clist->s[i];
+        if (s->c == c)
+            addstate(nlist, s->out);
+    }
 }
 
 /* Run NFA to determine whether it matches s. */
 int
 match(State *start, char *s)
 {
-	int i, c;
-	List *clist, *nlist, *t;
+    int i, c;
+    List *clist, *nlist, *t;
 
-	clist = startlist(start, &l1);
-	nlist = &l2;
-	for(; *s; s++){
-		c = *s & 0xFF;
-		step(clist, c, nlist);
-		t = clist; clist = nlist; nlist = t;	/* swap clist, nlist */
-	}
+    clist = startlist(start, &l1);
+    nlist = &l2;
+    for (; *s; s++) {
+        c = *s & 0xFF;
+        step(clist, c, nlist);
+        t = clist; clist = nlist; nlist = t;	/* swap clist, nlist */
+    }
 	return ismatch(clist);
 }
 
 int
 main(int argc, char **argv)
 {
-	int i;
-	char *post;
-	State *start;
+    int i;
+    char *post;
+    State *start;
 
-	if(argc < 3){
-		fprintf(stderr, "usage: nfa regexp string...\n");
-		return 1;
-	}
+    if (argc < 3) {
+        fprintf(stderr, "usage: nfa regexp string...\n");
+        return 1;
+    }
 
-	post = re2post(argv[1]);
-	if(post == NULL){
-		fprintf(stderr, "bad regexp %s\n", argv[1]);
-		return 1;
-	}
+    post = re2post(argv[1]);
+    if (post == NULL) {
+        fprintf(stderr, "bad regexp %s\n", argv[1]);
+        return 1;
+    }
 
-	start = post2nfa(post);
-	if(start == NULL){
-		fprintf(stderr, "error in post2nfa %s\n", post);
-		return 1;
-	}
+    start = post2nfa(post);
+    if (start == NULL) {
+        fprintf(stderr, "error in post2nfa %s\n", post);
+        return 1;
+    }
 
-	l1.s = malloc(nstate*sizeof l1.s[0]);
-	l2.s = malloc(nstate*sizeof l2.s[0]);
-	for(i = 2; i < argc; i++)
-		if(match(start, argv[i]))
-			printf("%s\n", argv[i]);
-	return 0;
+    l1.s = malloc(nstate*sizeof l1.s[0]);
+    l2.s = malloc(nstate*sizeof l2.s[0]);
+    for (i = 2; i < argc; i++)
+        if (match(start, argv[i]))
+            printf("%s\n", argv[i]);
+    return 0;
 }
